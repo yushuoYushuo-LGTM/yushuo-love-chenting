@@ -553,6 +553,7 @@ body.mood-gentle::before{opacity:0.07;}
         <span class="music-song">Dear D</span>
         <span class="music-artist">小鬼 · 周震南</span>
       </div>
+      <div style="margin-top:6px;font-size:0.7rem;letter-spacing:2px;" id="musicStatus">💿 准备就绪</div>
 
       <!-- Lyrics -->
       <div class="lyrics-wrap" id="lyricsWrap">
@@ -668,47 +669,102 @@ viewport.addEventListener('mousemove', function(e) {
 // ===== MUSIC PLAYER =====
 let audio = null;
 let isPlaying = false;
+let audioReady = false;
 let lyricTimer = null;
 let beatTimer = null;
 let particleTimer = null;
 const blushL = document.getElementById('blushL');
 const blushR = document.getElementById('blushR');
 const bowOverlay = document.getElementById('bowOverlay');
+const musicStatus = document.getElementById('musicStatus');
+const icon = document.getElementById('playIcon');
+const btn = document.getElementById('hkPlayBtn');
+
+// Preload audio immediately when page loads
+(function initAudio() {
+  audio = new Audio('./music/DearD.mp3');
+  audio.preload = 'auto';
+  audio.load();
+
+  audio.addEventListener('canplaythrough', () => {
+    audioReady = true;
+    musicStatus.textContent = '✅ 已就绪 · 点击Kitty播放';
+    musicStatus.style.color = '#4caf50';
+  });
+
+  audio.addEventListener('waiting', () => {
+    icon.textContent = '⟳';
+  });
+
+  audio.addEventListener('playing', () => {
+    icon.textContent = '⏸';
+  });
+
+  audio.addEventListener('play', () => {
+    btn.classList.add('playing');
+    isPlaying = true;
+    musicStatus.textContent = '🎵 播放中...';
+    musicStatus.style.color = '#e5004d';
+    syncLyrics();
+    startBeatPulse();
+    startParticleSpawn();
+  });
+
+  audio.addEventListener('pause', () => {
+    btn.classList.remove('playing');
+    icon.textContent = '▶';
+    isPlaying = false;
+    musicStatus.textContent = '⏸ 已暂停';
+    musicStatus.style.color = '#d4707a';
+    clearInterval(lyricTimer);stopBeatPulse();stopParticleSpawn();
+  });
+
+  audio.addEventListener('ended', () => {
+    btn.classList.remove('playing');
+    icon.textContent = '▶';
+    isPlaying = false;
+    musicStatus.textContent = '✅ 播放完毕 · 再听一遍?';
+    musicStatus.style.color = '#4caf50';
+    clearInterval(lyricTimer);stopBeatPulse();stopParticleSpawn();
+    document.querySelectorAll('.lyrics-line.active').forEach(l => l.classList.remove('active'));
+  });
+
+  audio.addEventListener('error', (e) => {
+    icon.textContent = '▶';
+    btn.classList.remove('playing');
+    isPlaying = false;
+    audioReady = false;
+    clearInterval(lyricTimer);stopBeatPulse();stopParticleSpawn();
+    const code = audio.error ? audio.error.code : 'UNKNOWN';
+    const msgs = {1:'❌ 加载中断',2:'❌ 网络错误',3:'❌ 解码失败',4:'❌ 格式不支持'};
+    musicStatus.textContent = (msgs[code]||'❌ 加载失败') + ' · 刷新试试';
+    musicStatus.style.color = '#e5004d';
+    setTimeout(() => { musicStatus.textContent = '💿 点击Kitty重试'; musicStatus.style.color = '#d4707a'; }, 3000);
+  });
+
+  // Show loading status
+  musicStatus.textContent = '💿 正在加载歌曲...';
+  musicStatus.style.color = '#d4707a';
+})();
 
 function toggleMusic() {
-  const btn = document.getElementById('hkPlayBtn');
-  const icon = document.getElementById('playIcon');
-  if (!audio) {
-    audio = new Audio('./music/DearD.mp3');
-    audio.preload = 'auto';
-    audio.addEventListener('play', () => {
-      btn.classList.add('playing');
-      icon.textContent = '⏸';
-      isPlaying = true;
-      syncLyrics();
-      startBeatPulse();
-      startParticleSpawn();
-    });
-    audio.addEventListener('pause', () => {
-      btn.classList.remove('playing');icon.textContent = '▶';isPlaying = false;
-      clearInterval(lyricTimer);stopBeatPulse();stopParticleSpawn();
-    });
-    audio.addEventListener('ended', () => {
-      btn.classList.remove('playing');icon.textContent = '▶';isPlaying = false;
-      clearInterval(lyricTimer);stopBeatPulse();stopParticleSpawn();
-      document.querySelectorAll('.lyrics-line.active').forEach(l => l.classList.remove('active'));
-    });
-    audio.addEventListener('error', () => {
-      icon.textContent = '⚠';btn.classList.remove('playing');isPlaying = false;
-      clearInterval(lyricTimer);stopBeatPulse();stopParticleSpawn();
-      setTimeout(() => { icon.textContent = '▶'; }, 2500);
-    });
+  if (!audioReady) {
+    musicStatus.textContent = '⏳ 歌曲加载中,请稍等...';
+    musicStatus.style.color = '#ff9800';
+    audio.load();
+    return;
   }
-  if (isPlaying) { audio.pause(); }
-  else {
-    audio.play().catch(err => {
-      icon.textContent = '⚠';btn.classList.remove('playing');isPlaying = false;
-      setTimeout(() => { icon.textContent = '▶'; }, 2500);
+  if (isPlaying) {
+    audio.pause();
+  } else {
+    audio.currentTime = 0; // restart from beginning each time
+    const p = audio.play();
+    if (p) p.catch(err => {
+      icon.textContent = '▶';
+      btn.classList.remove('playing');
+      isPlaying = false;
+      musicStatus.textContent = '❌ 播放被阻止 · 请再点一次';
+      musicStatus.style.color = '#e5004d';
     });
   }
 }
