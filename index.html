@@ -679,7 +679,7 @@ function toggleMusic() {
   const btn = document.getElementById('hkPlayBtn');
   const icon = document.getElementById('playIcon');
   if (!audio) {
-    audio = new Audio('./music/Dear D.mp3');
+    audio = new Audio('./music/DearD.mp3');
     audio.preload = 'auto';
     audio.addEventListener('play', () => {
       btn.classList.add('playing');
