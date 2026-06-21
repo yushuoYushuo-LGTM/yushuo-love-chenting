@@ -554,6 +554,7 @@ body.mood-gentle::before{opacity:0.07;}
         <span class="music-artist">小鬼 · 周震南</span>
       </div>
       <div style="margin-top:6px;font-size:0.7rem;letter-spacing:2px;" id="musicStatus">💿 准备就绪</div>
+      <div style="margin-top:2px;font-size:0.85rem;font-weight:700;color:#e5004d;letter-spacing:2px;" id="timeDisplay"></div>
 
       <!-- Lyrics -->
       <div class="lyrics-wrap" id="lyricsWrap">
@@ -714,6 +715,7 @@ const btn = document.getElementById('hkPlayBtn');
     btn.classList.remove('playing');
     icon.textContent = '▶';
     isPlaying = false;
+    const td = document.getElementById('timeDisplay'); if (td) td.textContent = '';
     musicStatus.textContent = '⏸ 已暂停';
     musicStatus.style.color = '#d4707a';
     clearInterval(lyricTimer);stopBeatPulse();stopParticleSpawn();
@@ -723,6 +725,7 @@ const btn = document.getElementById('hkPlayBtn');
     btn.classList.remove('playing');
     icon.textContent = '▶';
     isPlaying = false;
+    const td = document.getElementById('timeDisplay'); if (td) td.textContent = '';
     musicStatus.textContent = '✅ 播放完毕 · 再听一遍?';
     musicStatus.style.color = '#4caf50';
     clearInterval(lyricTimer);stopBeatPulse();stopParticleSpawn();
@@ -773,9 +776,11 @@ function syncLyrics() {
   clearInterval(lyricTimer);
   const lines = document.querySelectorAll('.lyrics-line');
   const wrap = document.getElementById('lyricsWrap');
+  const timeDisp = document.getElementById('timeDisplay');
   lyricTimer = setInterval(() => {
-    if (!audio || audio.paused) return;
+    if (!audio || audio.paused) { if (timeDisp) timeDisp.textContent = ''; return; }
     const t = audio.currentTime;
+    if (timeDisp) timeDisp.textContent = '⏱ ' + t.toFixed(1) + 's';
     let active = null;
     lines.forEach(l => { if (t >= parseFloat(l.getAttribute('data-time'))) active = l; });
     if (active) {
@@ -787,7 +792,7 @@ function syncLyrics() {
         active.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
-  }, 300);
+  }, 150);
 }
 
 // ===== BEAT PULSE: Blush + Bow =====
